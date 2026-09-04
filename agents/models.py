@@ -6,7 +6,7 @@ Standard: CAP / CLSI / ISO Standards
 import datetime
 from enum import Enum
 from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class UrgencyLevel(str, Enum):
@@ -22,14 +22,30 @@ class SystemIntegrityStatus(str, Enum):
 
 
 class SystemTaskPayload(BaseModel):
-    task_id: str = Field(..., description="Unique task / case identifier")
-    target_identifier: str = Field(..., description="Entity, patient key, or genomic/cryptographic target")
+    task_id: str = Field(..., description="Unique task / case identifier", min_length=1, max_length=128)
+    target_identifier: str = Field(..., description="Entity, patient key, or genomic/cryptographic target", min_length=1, max_length=128)
     primary_metric: float = Field(..., description="Primary domain measurement or score")
     secondary_metric: float = Field(default=0.0, description="Secondary kinetic or confidence score")
-    status_descriptor: str = Field(default="NOMINAL", description="Status code or phenotype descriptor")
+    status_descriptor: str = Field(default="NOMINAL", description="Status code or phenotype descriptor", max_length=64)
     is_critical_flag: bool = Field(default=False, description="Emergency escalation or high priority trigger")
     attributes: Dict[str, Any] = Field(default_factory=dict, description="Metadata key-value pairs")
     timestamp: str = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+
+    @field_validator("primary_metric", "secondary_metric")
+    @classmethod
+    def validate_metric_finite(cls, v: float) -> float:
+        if not isinstance(v, (int, float)) or v != v:  # NaN check
+            raise ValueError("Metric must be a finite number")
+        if abs(v) > 1e9:
+            raise ValueError("Metric value exceeds allowed bounds")
+        return float(v)
+
+    @field_validator("task_id", "target_identifier")
+    @classmethod
+    def validate_no_control_chars(cls, v: str) -> str:
+        if any(ord(c) < 32 and c not in "\t\n\r" for c in v):
+            raise ValueError("Identifier must not contain control characters")
+        return v
 
 
 class AgentAlert(BaseModel):

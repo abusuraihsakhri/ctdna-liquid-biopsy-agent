@@ -9,11 +9,12 @@ import math
 import json
 
 # =============================================================================
-# 1. OVERVIEW
+# BASE RESULT & ENGINE (shared across all enrichment modules)
 # =============================================================================
 @dataclass
-class OverviewEngineResult:
-    feature_name: str = "Overview"
+class EnrichmentResult:
+    """Shared result type for all enrichment engine evaluations."""
+    feature_name: str = "Enrichment"
     status: str = "OPTIMAL"
     score: float = 0.0
     metrics: Dict[str, Any] = field(default_factory=dict)
@@ -21,16 +22,17 @@ class OverviewEngineResult:
     recommendations: List[str] = field(default_factory=list)
     timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
-class OverviewEngine:
-    """
-    Overview: Detailed implementation plan for the 4 enrichment ideas assigned to this project. Each idea includes concrete module cha
-    """
-    def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
+
+class BaseEnrichmentEngine:
+    """Base class providing shared threshold-evaluation logic for all enrichment engines."""
+
+    def __init__(self, feature_name: str, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
+        self.feature_name = feature_name
         self.threshold = threshold
         self.config = config or {}
-        self.history: List[OverviewEngineResult] = []
+        self.history: List[EnrichmentResult] = []
 
-    def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> OverviewEngineResult:
+    def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> EnrichmentResult:
         alerts = []
         recs = []
         status = "OPTIMAL"
@@ -38,375 +40,209 @@ class OverviewEngine:
 
         if primary_value > self.threshold * 2:
             status = "CRITICAL_ALERT"
-            alerts.append(f"Overview: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})")
+            alerts.append(
+                f"{self.feature_name}: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})"
+            )
             recs.append("Initiate immediate protocol review and escalate to attending lead.")
         elif primary_value > self.threshold:
             status = "WARNING"
-            alerts.append(f"Overview: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})")
+            alerts.append(
+                f"{self.feature_name}: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})"
+            )
             recs.append("Increase monitoring frequency and perform secondary verification.")
         else:
             recs.append("Parameters nominal under standard operating bounds.")
 
-        res = OverviewEngineResult(
-            feature_name="Overview",
+        res = EnrichmentResult(
+            feature_name=self.feature_name,
             status=status,
             score=score,
             metrics={"primary": primary_value, "secondary": secondary_value, **kwargs},
             alerts=alerts,
-            recommendations=recs
+            recommendations=recs,
         )
         self.history.append(res)
         return res
+
+
+# =============================================================================
+# 1. OVERVIEW
+# =============================================================================
+@dataclass
+class OverviewEngineResult(EnrichmentResult):
+    feature_name: str = "Overview"
+
+
+class OverviewEngine(BaseEnrichmentEngine):
+    """Overview: Detailed implementation plan for the 4 enrichment ideas assigned to this project."""
+
+    def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
+        super().__init__("Overview", threshold, config)
+
+    def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> OverviewEngineResult:
+        res = super().evaluate(primary_value, secondary_value, **kwargs)
+        return OverviewEngineResult(
+            feature_name=res.feature_name,
+            status=res.status,
+            score=res.score,
+            metrics=res.metrics,
+            alerts=res.alerts,
+            recommendations=res.recommendations,
+            timestamp=res.timestamp,
+        )
 
 # =============================================================================
 # 2. CTDNA MOLECULAR RESIDUAL DISEASE (MRD) TRACKING WITH VAF TRENDS
 # =============================================================================
 @dataclass
-class CtdnaMolecularResidualDiseaseMrdTrackingWithVafTrendsEngineResult:
+class CtdnaMolecularResidualDiseaseMrdTrackingWithVafTrendsEngineResult(EnrichmentResult):
     feature_name: str = "ctDNA Molecular Residual Disease (MRD) Tracking with VAF Trends"
-    status: str = "OPTIMAL"
-    score: float = 0.0
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
-class CtdnaMolecularResidualDiseaseMrdTrackingWithVafTrendsEngine:
-    """
-    ctDNA Molecular Residual Disease (MRD) Tracking with VAF Trends: ctDNA Molecular Residual Disease (MRD) Tracking with VAF Trends
-    """
+
+class CtdnaMolecularResidualDiseaseMrdTrackingWithVafTrendsEngine(BaseEnrichmentEngine):
+    """ctDNA Molecular Residual Disease (MRD) Tracking with VAF Trends: Longitudinal VAF monitoring and trend classification."""
+
     def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
-        self.threshold = threshold
-        self.config = config or {}
-        self.history: List[CtdnaMolecularResidualDiseaseMrdTrackingWithVafTrendsEngineResult] = []
+        super().__init__("ctDNA Molecular Residual Disease (MRD) Tracking with VAF Trends", threshold, config)
 
     def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> CtdnaMolecularResidualDiseaseMrdTrackingWithVafTrendsEngineResult:
-        alerts = []
-        recs = []
-        status = "OPTIMAL"
-        score = round(float(primary_value), 3)
-
-        if primary_value > self.threshold * 2:
-            status = "CRITICAL_ALERT"
-            alerts.append(f"ctDNA Molecular Residual Disease (MRD) Tracking with VAF Trends: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})")
-            recs.append("Initiate immediate protocol review and escalate to attending lead.")
-        elif primary_value > self.threshold:
-            status = "WARNING"
-            alerts.append(f"ctDNA Molecular Residual Disease (MRD) Tracking with VAF Trends: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})")
-            recs.append("Increase monitoring frequency and perform secondary verification.")
-        else:
-            recs.append("Parameters nominal under standard operating bounds.")
-
-        res = CtdnaMolecularResidualDiseaseMrdTrackingWithVafTrendsEngineResult(
-            feature_name="ctDNA Molecular Residual Disease (MRD) Tracking with VAF Trends",
-            status=status,
-            score=score,
-            metrics={"primary": primary_value, "secondary": secondary_value, **kwargs},
-            alerts=alerts,
-            recommendations=recs
+        res = super().evaluate(primary_value, secondary_value, **kwargs)
+        return CtdnaMolecularResidualDiseaseMrdTrackingWithVafTrendsEngineResult(
+            feature_name=res.feature_name, status=res.status, score=res.score,
+            metrics=res.metrics, alerts=res.alerts, recommendations=res.recommendations, timestamp=res.timestamp,
         )
-        self.history.append(res)
-        return res
+
 
 # =============================================================================
 # 3. GOAL
 # =============================================================================
 @dataclass
-class GoalEngineResult:
+class GoalEngineResult(EnrichmentResult):
     feature_name: str = "Goal"
-    status: str = "OPTIMAL"
-    score: float = 0.0
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
-class GoalEngine:
-    """
-    Goal: Implement longitudinal VAF trend analysis with exponential decay modeling, molecular response classification, and relaps
-    """
+
+class GoalEngine(BaseEnrichmentEngine):
+    """Goal: Implement longitudinal VAF trend analysis with exponential decay modeling, molecular response classification, and relapse prediction."""
+
     def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
-        self.threshold = threshold
-        self.config = config or {}
-        self.history: List[GoalEngineResult] = []
+        super().__init__("Goal", threshold, config)
 
     def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> GoalEngineResult:
-        alerts = []
-        recs = []
-        status = "OPTIMAL"
-        score = round(float(primary_value), 3)
-
-        if primary_value > self.threshold * 2:
-            status = "CRITICAL_ALERT"
-            alerts.append(f"Goal: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})")
-            recs.append("Initiate immediate protocol review and escalate to attending lead.")
-        elif primary_value > self.threshold:
-            status = "WARNING"
-            alerts.append(f"Goal: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})")
-            recs.append("Increase monitoring frequency and perform secondary verification.")
-        else:
-            recs.append("Parameters nominal under standard operating bounds.")
-
-        res = GoalEngineResult(
-            feature_name="Goal",
-            status=status,
-            score=score,
-            metrics={"primary": primary_value, "secondary": secondary_value, **kwargs},
-            alerts=alerts,
-            recommendations=recs
+        res = super().evaluate(primary_value, secondary_value, **kwargs)
+        return GoalEngineResult(
+            feature_name=res.feature_name, status=res.status, score=res.score,
+            metrics=res.metrics, alerts=res.alerts, recommendations=res.recommendations, timestamp=res.timestamp,
         )
-        self.history.append(res)
-        return res
+
 
 # =============================================================================
 # 4. DATA MODEL CHANGES
 # =============================================================================
 @dataclass
-class DataModelChangesEngineResult:
+class DataModelChangesEngineResult(EnrichmentResult):
     feature_name: str = "Data Model Changes"
-    status: str = "OPTIMAL"
-    score: float = 0.0
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
-class DataModelChangesEngine:
-    """
-    Data Model Changes: **New file**: `ctdna_liquid_biopsy_agent/models.py` additions
-    """
+
+class DataModelChangesEngine(BaseEnrichmentEngine):
+    """Data Model Changes: Additions to `ctdna_liquid_biopsy_agent/models.py` for enriched clinical data structures."""
+
     def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
-        self.threshold = threshold
-        self.config = config or {}
-        self.history: List[DataModelChangesEngineResult] = []
+        super().__init__("Data Model Changes", threshold, config)
 
     def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> DataModelChangesEngineResult:
-        alerts = []
-        recs = []
-        status = "OPTIMAL"
-        score = round(float(primary_value), 3)
-
-        if primary_value > self.threshold * 2:
-            status = "CRITICAL_ALERT"
-            alerts.append(f"Data Model Changes: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})")
-            recs.append("Initiate immediate protocol review and escalate to attending lead.")
-        elif primary_value > self.threshold:
-            status = "WARNING"
-            alerts.append(f"Data Model Changes: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})")
-            recs.append("Increase monitoring frequency and perform secondary verification.")
-        else:
-            recs.append("Parameters nominal under standard operating bounds.")
-
-        res = DataModelChangesEngineResult(
-            feature_name="Data Model Changes",
-            status=status,
-            score=score,
-            metrics={"primary": primary_value, "secondary": secondary_value, **kwargs},
-            alerts=alerts,
-            recommendations=recs
+        res = super().evaluate(primary_value, secondary_value, **kwargs)
+        return DataModelChangesEngineResult(
+            feature_name=res.feature_name, status=res.status, score=res.score,
+            metrics=res.metrics, alerts=res.alerts, recommendations=res.recommendations, timestamp=res.timestamp,
         )
-        self.history.append(res)
-        return res
+
 
 # =============================================================================
 # 5. NEW MODULE
 # =============================================================================
 @dataclass
-class NewModuleEngineResult:
+class NewModuleEngineResult(EnrichmentResult):
     feature_name: str = "New Module"
-    status: str = "OPTIMAL"
-    score: float = 0.0
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
-class NewModuleEngine:
-    """
-    New Module: **New file**: `ctdna_liquid_biopsy_agent/mrd_tracker.py`
-    """
+
+class NewModuleEngine(BaseEnrichmentEngine):
+    """New Module: Implementation of `ctdna_liquid_biopsy_agent/mrd_tracker.py` for MRD tracking."""
+
     def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
-        self.threshold = threshold
-        self.config = config or {}
-        self.history: List[NewModuleEngineResult] = []
+        super().__init__("New Module", threshold, config)
 
     def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> NewModuleEngineResult:
-        alerts = []
-        recs = []
-        status = "OPTIMAL"
-        score = round(float(primary_value), 3)
-
-        if primary_value > self.threshold * 2:
-            status = "CRITICAL_ALERT"
-            alerts.append(f"New Module: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})")
-            recs.append("Initiate immediate protocol review and escalate to attending lead.")
-        elif primary_value > self.threshold:
-            status = "WARNING"
-            alerts.append(f"New Module: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})")
-            recs.append("Increase monitoring frequency and perform secondary verification.")
-        else:
-            recs.append("Parameters nominal under standard operating bounds.")
-
-        res = NewModuleEngineResult(
-            feature_name="New Module",
-            status=status,
-            score=score,
-            metrics={"primary": primary_value, "secondary": secondary_value, **kwargs},
-            alerts=alerts,
-            recommendations=recs
+        res = super().evaluate(primary_value, secondary_value, **kwargs)
+        return NewModuleEngineResult(
+            feature_name=res.feature_name, status=res.status, score=res.score,
+            metrics=res.metrics, alerts=res.alerts, recommendations=res.recommendations, timestamp=res.timestamp,
         )
-        self.history.append(res)
-        return res
+
 
 # =============================================================================
 # 6. AGENT CHANGES
 # =============================================================================
 @dataclass
-class AgentChangesEngineResult:
+class AgentChangesEngineResult(EnrichmentResult):
     feature_name: str = "Agent Changes"
-    status: str = "OPTIMAL"
-    score: float = 0.0
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
-class AgentChangesEngine:
-    """
-    Agent Changes: **Modify**: `VAFKineticsTrackerAgent` in `ctdna_liquid_biopsy_agent/agents.py`
-    """
+
+class AgentChangesEngine(BaseEnrichmentEngine):
+    """Agent Changes: Modifications to `VAFKineticsTrackerAgent` in `ctdna_liquid_biopsy_agent/agents.py`."""
+
     def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
-        self.threshold = threshold
-        self.config = config or {}
-        self.history: List[AgentChangesEngineResult] = []
+        super().__init__("Agent Changes", threshold, config)
 
     def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> AgentChangesEngineResult:
-        alerts = []
-        recs = []
-        status = "OPTIMAL"
-        score = round(float(primary_value), 3)
-
-        if primary_value > self.threshold * 2:
-            status = "CRITICAL_ALERT"
-            alerts.append(f"Agent Changes: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})")
-            recs.append("Initiate immediate protocol review and escalate to attending lead.")
-        elif primary_value > self.threshold:
-            status = "WARNING"
-            alerts.append(f"Agent Changes: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})")
-            recs.append("Increase monitoring frequency and perform secondary verification.")
-        else:
-            recs.append("Parameters nominal under standard operating bounds.")
-
-        res = AgentChangesEngineResult(
-            feature_name="Agent Changes",
-            status=status,
-            score=score,
-            metrics={"primary": primary_value, "secondary": secondary_value, **kwargs},
-            alerts=alerts,
-            recommendations=recs
+        res = super().evaluate(primary_value, secondary_value, **kwargs)
+        return AgentChangesEngineResult(
+            feature_name=res.feature_name, status=res.status, score=res.score,
+            metrics=res.metrics, alerts=res.alerts, recommendations=res.recommendations, timestamp=res.timestamp,
         )
-        self.history.append(res)
-        return res
+
 
 # =============================================================================
 # 7. COMPUTE RELAPSE RISK SCORE
 # =============================================================================
 @dataclass
-class ComputeRelapseRiskScoreEngineResult:
+class ComputeRelapseRiskScoreEngineResult(EnrichmentResult):
     feature_name: str = "Compute relapse risk score"
-    status: str = "OPTIMAL"
-    score: float = 0.0
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
-class ComputeRelapseRiskScoreEngine:
-    """
-    Compute relapse risk score: **Modify**: `LiquidBiopsyCoordinator` in `ctdna_liquid_biopsy_agent/agents.py`
-    """
+
+class ComputeRelapseRiskScoreEngine(BaseEnrichmentEngine):
+    """Compute relapse risk score: Enhancement to `LiquidBiopsyCoordinator` in `ctdna_liquid_biopsy_agent/agents.py`."""
+
     def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
-        self.threshold = threshold
-        self.config = config or {}
-        self.history: List[ComputeRelapseRiskScoreEngineResult] = []
+        super().__init__("Compute relapse risk score", threshold, config)
 
     def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> ComputeRelapseRiskScoreEngineResult:
-        alerts = []
-        recs = []
-        status = "OPTIMAL"
-        score = round(float(primary_value), 3)
-
-        if primary_value > self.threshold * 2:
-            status = "CRITICAL_ALERT"
-            alerts.append(f"Compute relapse risk score: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})")
-            recs.append("Initiate immediate protocol review and escalate to attending lead.")
-        elif primary_value > self.threshold:
-            status = "WARNING"
-            alerts.append(f"Compute relapse risk score: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})")
-            recs.append("Increase monitoring frequency and perform secondary verification.")
-        else:
-            recs.append("Parameters nominal under standard operating bounds.")
-
-        res = ComputeRelapseRiskScoreEngineResult(
-            feature_name="Compute relapse risk score",
-            status=status,
-            score=score,
-            metrics={"primary": primary_value, "secondary": secondary_value, **kwargs},
-            alerts=alerts,
-            recommendations=recs
+        res = super().evaluate(primary_value, secondary_value, **kwargs)
+        return ComputeRelapseRiskScoreEngineResult(
+            feature_name=res.feature_name, status=res.status, score=res.score,
+            metrics=res.metrics, alerts=res.alerts, recommendations=res.recommendations, timestamp=res.timestamp,
         )
-        self.history.append(res)
-        return res
+
 
 # =============================================================================
 # 8. API CHANGES
 # =============================================================================
 @dataclass
-class ApiChangesEngineResult:
+class ApiChangesEngineResult(EnrichmentResult):
     feature_name: str = "API Changes"
-    status: str = "OPTIMAL"
-    score: float = 0.0
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
-class ApiChangesEngine:
-    """
-    API Changes: **New endpoint**: `POST /api/v1/mrd-tracking`
-    """
+
+class ApiChangesEngine(BaseEnrichmentEngine):
+    """API Changes: New endpoint `POST /api/v1/mrd-tracking` for MRD tracking integration."""
+
     def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
-        self.threshold = threshold
-        self.config = config or {}
-        self.history: List[ApiChangesEngineResult] = []
+        super().__init__("API Changes", threshold, config)
 
     def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> ApiChangesEngineResult:
-        alerts = []
-        recs = []
-        status = "OPTIMAL"
-        score = round(float(primary_value), 3)
-
-        if primary_value > self.threshold * 2:
-            status = "CRITICAL_ALERT"
-            alerts.append(f"API Changes: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})")
-            recs.append("Initiate immediate protocol review and escalate to attending lead.")
-        elif primary_value > self.threshold:
-            status = "WARNING"
-            alerts.append(f"API Changes: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})")
-            recs.append("Increase monitoring frequency and perform secondary verification.")
-        else:
-            recs.append("Parameters nominal under standard operating bounds.")
-
-        res = ApiChangesEngineResult(
-            feature_name="API Changes",
-            status=status,
-            score=score,
-            metrics={"primary": primary_value, "secondary": secondary_value, **kwargs},
-            alerts=alerts,
-            recommendations=recs
+        res = super().evaluate(primary_value, secondary_value, **kwargs)
+        return ApiChangesEngineResult(
+            feature_name=res.feature_name, status=res.status, score=res.score,
+            metrics=res.metrics, alerts=res.alerts, recommendations=res.recommendations, timestamp=res.timestamp,
         )
-        self.history.append(res)
-        return res
 
 # =============================================================================
 # COMPOSITE ENRICHMENT SUITE
