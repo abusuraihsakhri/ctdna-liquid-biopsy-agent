@@ -24,10 +24,19 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify public site response
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          html="$(curl --fail --location --silent --show-error --retry 6 --retry-all-errors --retry-delay 10 "$SITE_URL")"
+          if [[ "$html" != *"Synthetic Data Demonstrator"* ]] || [[ "$html" != *"function evaluateRuleSet(p)"* ]]; then
+            echo "Expected application markup and script missing at deployed URL"
+            exit 1
+          fi
