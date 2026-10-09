@@ -1,5 +1,7 @@
 # CTDNA Liquid Biopsy Agent
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/ctdna-liquid-biopsy-agent/)
+
 A research prototype for synthetic ctDNA audit examples, CHIP filtering heuristics, serial variant allele frequency (VAF) analysis, and cross-platform concordance exploration.
 
 **Research and education only—not for clinical use.** Thresholds, CHIP probabilities, molecular response categories, assumed detection limits, relapse risk scores, and time-to-threshold extrapolations are illustrative and **not clinically validated**. They are not RECIST response criteria. Do not use these outputs to diagnose MRD, predict relapse, or direct treatment.
@@ -8,7 +10,7 @@ A research prototype for synthetic ctDNA audit examples, CHIP filtering heuristi
 
 The standalone [browser interface](web/index.html) evaluates three example rules inside the current browser tab. It is static HTML/JavaScript, with no Python runtime, backend requests, analytics, persistent input storage, or signed audit records. **Use synthetic identifiers only.**
 
-GitHub Pages deployment automation is included. The repository must be configured for GitHub Pages **GitHub Actions** publishing before a live URL can be verified.
+GitHub Pages publishing uses the deployment workflow at `.github/workflows/pages.yml`. The workflow completed successfully for the production branch. The public application URL above is taken from the deployment's reported environment URL.
 
 ## Features and architecture
 
