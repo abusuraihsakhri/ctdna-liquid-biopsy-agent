@@ -27,6 +27,8 @@ jobs:
           python -m pip install -e ".[server,test]"
       - name: Compile Python files
         run: python -m compileall -q agents ctdna_liquid_biopsy_agent cli.py input_validation.py
+      - name: Check static demonstrator JavaScript
+        run: node tests/web_smoke.cjs
       - name: Verify package entry points
         run: |
           ctdna-liquid-biopsy-engine --help
