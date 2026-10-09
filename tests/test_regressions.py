@@ -112,3 +112,36 @@ def test_wbc_positive_discordant_variant_is_not_included():
     result = CHIPFilter().filter_variants("C", "S", plasma, wbc)
     assert result.uncertain_variants == 1
     assert result.tumor_variants_retained == 0
+
+
+def test_enterprise_api_health_and_audit():
+    from fastapi.testclient import TestClient
+    from agents.api import app
+
+    client = TestClient(app)
+    assert client.get("/health").status_code == 200
+    audit = client.post("/api/audit", json={
+        "task_id": "SYNTH-API-01", "target_identifier": "SYNTH-SPEC-01",
+        "primary_metric": 10, "secondary_metric": 2,
+        "is_critical_flag": False, "status_descriptor": "NOMINAL"
+    })
+    assert audit.status_code == 200
+    assert audit.json()["overall_urgency"] == "ROUTINE"
+    assert client.get("/api/audit/logs").json()["verified"] is True
+
+
+def test_clinical_api_health_and_audit():
+    from fastapi.testclient import TestClient
+    from ctdna_liquid_biopsy_agent.server import create_app
+
+    app = create_app()
+    assert app is not None
+    client = TestClient(app)
+    assert client.get("/health").status_code == 200
+    response = client.post("/api/audit", json={
+        "case_id": "SYNTH-01", "patient_synthetic_id": "SYNTH-PT",
+        "primary_metric": 10, "secondary_metric": 2,
+        "is_stat": False, "status_flag": "NORMAL"
+    })
+    assert response.status_code == 200
+    assert response.json()["overall_status"] == "CONCORDANT_NORMAL"
