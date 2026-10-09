@@ -17,8 +17,8 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install package and test dependencies
@@ -35,6 +35,9 @@ jobs:
           ctdna-clinical --help
       - name: Run tests
         run: python -m pytest -q
+      - name: Build container image (Python 3.12 job)
+        if: matrix.python-version == '3.12'
+        run: docker build -t ctdna-liquid-biopsy-agent:ci .
       - name: Verify audit chain
         run: |
           python -c "from agents.base import AuditLogger; assert AuditLogger.verify_integrity()"
