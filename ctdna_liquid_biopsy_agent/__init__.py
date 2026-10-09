@@ -1,5 +1,5 @@
 """
 LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker
-Tracks longitudinal plasma ctDNA variant allele frequencies, detecting molecular relapse months before radiographic progression.
+Exploratory serial ctDNA VAF analysis; no clinical outcome prediction validation.
 """
 __version__ = "2.0.0-PRO"

@@ -14,7 +14,7 @@ def create_app():
 
         app = FastAPI(
             title="LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker",
-            description="Tracks longitudinal plasma ctDNA variant allele frequencies, detecting molecular relapse months before radiographic progression.",
+            description="Exploratory ctDNA examples using synthetic data; not clinically validated.",
             version="2.0.0-PRO",
         )
 

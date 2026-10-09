@@ -156,6 +156,8 @@ class CHIPFilter:
 
         # Check if variant is present in WBC by exact ID match
         wbc_match = wbc_by_id.get(plasma.variant_id)
+        if wbc_match is not None and wbc_match.gene.upper() != plasma.gene.upper():
+            raise ValueError("Matched plasma/WBC variant IDs must have the same gene")
 
         if wbc_match is not None:
             # Variant found in WBC — compare VAFs

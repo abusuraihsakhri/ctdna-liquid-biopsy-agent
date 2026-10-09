@@ -5,6 +5,7 @@ Signatera) with confidence-weighted consensus variant calls.
 Domain: Precision Oncology — Liquid Biopsy
 """
 import datetime
+import math
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 
@@ -118,9 +119,9 @@ class ConcordanceAnalyzer:
         # Group results by variant_id
         variant_groups: Dict[str, List[PlatformCtDNAResult]] = {}
         for r in platform_results:
-            if r.depth < 0 or not 0 <= r.vaf_percent <= 100:
+            if r.depth < 0 or not math.isfinite(r.vaf_percent) or not 0 <= r.vaf_percent <= 100:
                 raise ValueError("Depth and VAF must be nonnegative, with VAF at most 100%")
-            if r.sensitivity <= 0:
+            if not math.isfinite(r.sensitivity) or r.sensitivity <= 0:
                 raise ValueError("The detection-limit parameter must be greater than zero")
             variant_groups.setdefault(r.variant_id, []).append(r)
         for variant_id, results in variant_groups.items():

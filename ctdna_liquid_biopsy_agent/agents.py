@@ -105,6 +105,6 @@ class LiquidBiopsyCoordinator:
         if "status" in q or "summary" in q:
             return f"LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker currently tracking {len(self.case_registry)} cases in on-premises memory."
         elif "guideline" in q or "standard" in q:
-            return "Active clinical surveillance operates under AMP / ASCO / CAP Somatic Variant Tiers validated protocols."
+            return "Guideline terminology is referenced for context; the numerical rules are illustrative and have not been clinically validated."
         else:
-            return f"LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker executive agent online. Zero-PHI air-gapped monitoring active."
+            return f"LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker synthetic-data demonstrator active. No patient privacy certification is provided."

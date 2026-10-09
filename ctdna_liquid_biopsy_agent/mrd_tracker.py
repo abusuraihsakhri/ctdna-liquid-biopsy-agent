@@ -40,7 +40,7 @@ class MRDTrackingReport:
     cmr_achieved: bool
     cmr_date: Optional[str]
     relapse_risk_score: float  # 0-100
-    predicted_time_to_relapse_days: Optional[int]
+    predicted_time_to_relapse_days: Optional[int]  # Legacy name: extrapolated days to arbitrary 1% VAF, NOT clinical relapse
     waterfall_plot_data: List[Dict[str, Any]]
     timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
@@ -57,25 +57,25 @@ RESPONSE_DEFINITIONS = {
         category="CMR",
         definition="Complete Molecular Response — ctDNA undetectable below limit of detection",
         vaf_threshold=f"< {LOD_THRESHOLD}%",
-        imaging_correlation="Expected CR or PR on imaging",
+        imaging_correlation="No validated imaging correlation",
     ),
     "PMR": MolecularResponseClassification(
         category="PMR",
         definition="Partial Molecular Response — ctDNA declining ≥50% from baseline",
         vaf_threshold="≥50% decline from baseline",
-        imaging_correlation="Likely PR on imaging",
+        imaging_correlation="No validated imaging correlation",
     ),
     "SMD": MolecularResponseClassification(
         category="SMD",
         definition="Stable Molecular Disease — ctDNA <50% decline, no significant increase",
         vaf_threshold="<50% decline, <50% increase",
-        imaging_correlation="Stable disease on imaging",
+        imaging_correlation="No validated imaging correlation",
     ),
     "PMD": MolecularResponseClassification(
         category="PMD",
         definition="Progressive Molecular Disease — ctDNA increase ≥50% or new variant detected",
         vaf_threshold="≥50% increase from nadir",
-        imaging_correlation="Likely PD on imaging",
+        imaging_correlation="No validated imaging correlation",
     ),
 }
 
@@ -284,7 +284,7 @@ class MRDTracker:
         trend: str,
         half_life: Optional[float],
     ) -> Optional[int]:
-        """Predict days to clinical relapse based on VAF trajectory."""
+        """Illustrative days to 1% VAF; this is not a clinical relapse prediction."""
         if trend != "RISING" or not measurements:
             return None
 
