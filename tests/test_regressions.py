@@ -145,3 +145,32 @@ def test_clinical_api_health_and_audit():
     })
     assert response.status_code == 200
     assert response.json()["overall_status"] == "CONCORDANT_NORMAL"
+
+
+def test_concordance_all_negative_is_agreement():
+    from ctdna_liquid_biopsy_agent.concordance import ConcordanceAnalyzer, PlatformCtDNAResult
+    records = [
+        PlatformCtDNAResult("GUARDANT360", "V1", "EGFR", 0.0, 1000, False, 0.1),
+        PlatformCtDNAResult("SIGNATERA", "V1", "EGFR", 0.0, 1000, False, 0.01),
+    ]
+    result = ConcordanceAnalyzer().analyze_concordance("C", "S", records)
+    assert result.overall_concordance_score == 100.0
+    assert result.variant_concordance[0].consensus_call == "NOT_DETECTED"
+
+
+def test_concordance_does_not_mark_unassayed_platform_as_negative():
+    from ctdna_liquid_biopsy_agent.concordance import ConcordanceAnalyzer, PlatformCtDNAResult
+    records = [
+        PlatformCtDNAResult("GUARDANT360", "V1", "EGFR", 2.0, 1000, True, 0.1),
+        PlatformCtDNAResult("SIGNATERA", "V2", "KRAS", 1.0, 1000, True, 0.01),
+    ]
+    result = ConcordanceAnalyzer().analyze_concordance("C", "S", records)
+    for variant in result.variant_concordance:
+        assert variant.platforms_missed == []
+
+
+def test_concordance_rejects_duplicate_platform_variant():
+    from ctdna_liquid_biopsy_agent.concordance import ConcordanceAnalyzer, PlatformCtDNAResult
+    v = PlatformCtDNAResult("GUARDANT360", "V1", "EGFR", 2.0, 1000, True, 0.1)
+    with pytest.raises(ValueError):
+        ConcordanceAnalyzer().analyze_concordance("C", "S", [v, v])
