@@ -40,7 +40,7 @@ class MRDTrackingReport:
     cmr_achieved: bool
     cmr_date: Optional[str]
     relapse_risk_score: float  # 0-100
-    predicted_time_to_relapse_days: Optional[int]
+    predicted_time_to_relapse_days: Optional[int]  # Legacy name: extrapolated days to arbitrary 1% VAF, NOT clinical relapse
     waterfall_plot_data: List[Dict[str, Any]]
     timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
@@ -57,25 +57,25 @@ RESPONSE_DEFINITIONS = {
         category="CMR",
         definition="Complete Molecular Response — ctDNA undetectable below limit of detection",
         vaf_threshold=f"< {LOD_THRESHOLD}%",
-        imaging_correlation="Expected CR or PR on imaging",
+        imaging_correlation="No validated imaging correlation",
     ),
     "PMR": MolecularResponseClassification(
         category="PMR",
         definition="Partial Molecular Response — ctDNA declining ≥50% from baseline",
         vaf_threshold="≥50% decline from baseline",
-        imaging_correlation="Likely PR on imaging",
+        imaging_correlation="No validated imaging correlation",
     ),
     "SMD": MolecularResponseClassification(
         category="SMD",
         definition="Stable Molecular Disease — ctDNA <50% decline, no significant increase",
         vaf_threshold="<50% decline, <50% increase",
-        imaging_correlation="Stable disease on imaging",
+        imaging_correlation="No validated imaging correlation",
     ),
     "PMD": MolecularResponseClassification(
         category="PMD",
         definition="Progressive Molecular Disease — ctDNA increase ≥50% or new variant detected",
         vaf_threshold="≥50% increase from nadir",
-        imaging_correlation="Likely PD on imaging",
+        imaging_correlation="No validated imaging correlation",
     ),
 }
 
@@ -109,6 +109,13 @@ class MRDTracker:
         if not measurements:
             return self._empty_report(case_id, patient_synthetic_id)
 
+        if len({m.variant_id for m in measurements}) != 1:
+            raise ValueError("An MRD series must track a single variant_id")
+        for m in measurements:
+            if not math.isfinite(m.vaf_percent) or not 0 <= m.vaf_percent <= 100:
+                raise ValueError("VAF must be a finite percentage between 0 and 100")
+            if m.time_from_treatment_start_days < 0:
+                raise ValueError("Measurement days must be nonnegative")
         sorted_measurements = sorted(measurements, key=lambda m: m.time_from_treatment_start_days)
 
         # Compute waterfall plot data (percent change from baseline)
@@ -189,17 +196,13 @@ class MRDTracker:
         if len(measurements) < 2:
             return "STABLE"
 
-        detectable = [m for m in measurements if m.vaf_percent > LOD_THRESHOLD]
-        if len(detectable) < 2:
-            return "DECLINING"
-
-        first_half = detectable[: len(detectable) // 2 + 1]
-        second_half = detectable[len(detectable) // 2 :]
-
-        avg_first = sum(m.vaf_percent for m in first_half) / len(first_half)
-        avg_second = sum(m.vaf_percent for m in second_half) / len(second_half)
-
-        change_pct = (avg_second - avg_first) / avg_first if avg_first > 0 else 0
+        first = measurements[0].vaf_percent
+        last = measurements[-1].vaf_percent
+        if first <= LOD_THRESHOLD and last <= LOD_THRESHOLD:
+            return "STABLE"
+        if first <= LOD_THRESHOLD:
+            return "RISING"
+        change_pct = (last - first) / first
 
         if change_pct < -0.20:
             return "DECLINING"
@@ -210,7 +213,7 @@ class MRDTracker:
     def _classify_molecular_response(
         self, measurements: List[SerialVAFMeasurement], baseline_vaf: float
     ) -> str:
-        """Classify molecular response per RECIST 1.1 molecular criteria."""
+        """Classify an exploratory VAF response (not RECIST 1.1 or a validated MRD criterion)."""
         if not measurements:
             return "SMD"
 
@@ -221,19 +224,19 @@ class MRDTracker:
         if latest_vaf < CMR_THRESHOLD:
             return "CMR"
 
-        # Check for PMR: ≥50% decline from baseline
+        # A rebound from prior nadir takes precedence over a decline from
+        # baseline. The thresholds are illustrative, not validated MRD cutoffs.
+        if len(measurements) > 1:
+            nadir_vaf = min(m.vaf_percent for m in measurements[:-1])
+            if nadir_vaf <= LOD_THRESHOLD and latest_vaf > LOD_THRESHOLD:
+                return "PMD"
+            if nadir_vaf > LOD_THRESHOLD and (latest_vaf - nadir_vaf) / nadir_vaf >= PMD_INCREASE_THRESHOLD:
+                return "PMD"
+
         if baseline_vaf > 0:
             decline = (baseline_vaf - latest_vaf) / baseline_vaf
             if decline >= PMR_DECLINE_THRESHOLD:
                 return "PMR"
-
-        # Check for PMD: ≥50% increase from nadir
-        nadir_vaf = min(m.vaf_percent for m in measurements)
-        if nadir_vaf > 0:
-            increase = (latest_vaf - nadir_vaf) / nadir_vaf
-            if increase >= PMD_INCREASE_THRESHOLD:
-                return "PMD"
-
         return "SMD"
 
     def _check_cmr(self, measurements: List[SerialVAFMeasurement]) -> tuple:
@@ -281,7 +284,7 @@ class MRDTracker:
         trend: str,
         half_life: Optional[float],
     ) -> Optional[int]:
-        """Predict days to clinical relapse based on VAF trajectory."""
+        """Illustrative days to 1% VAF; this is not a clinical relapse prediction."""
         if trend != "RISING" or not measurements:
             return None
 

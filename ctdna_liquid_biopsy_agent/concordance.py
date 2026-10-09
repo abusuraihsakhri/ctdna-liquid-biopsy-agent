@@ -5,6 +5,7 @@ Signatera) with confidence-weighted consensus variant calls.
 Domain: Precision Oncology — Liquid Biopsy
 """
 import datetime
+import math
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 
@@ -113,12 +114,19 @@ class ConcordanceAnalyzer:
             return self._empty_analysis(case_id, patient_synthetic_id)
 
         # Get unique platforms
-        platforms = list(set(r.platform for r in platform_results))
+        platforms = sorted({r.platform for r in platform_results})
 
         # Group results by variant_id
         variant_groups: Dict[str, List[PlatformCtDNAResult]] = {}
         for r in platform_results:
+            if r.depth < 0 or not math.isfinite(r.vaf_percent) or not 0 <= r.vaf_percent <= 100:
+                raise ValueError("Depth and VAF must be nonnegative, with VAF at most 100%")
+            if not math.isfinite(r.sensitivity) or r.sensitivity <= 0:
+                raise ValueError("The detection-limit parameter must be greater than zero")
             variant_groups.setdefault(r.variant_id, []).append(r)
+        for variant_id, results in variant_groups.items():
+            if len({r.platform for r in results}) != len(results):
+                raise ValueError(f"Duplicate measurements for variant {variant_id} on the same platform")
 
         # Analyze each variant
         concordances: List[VariantConcordance] = []
@@ -156,12 +164,12 @@ class ConcordanceAnalyzer:
         all_platforms: List[str],
     ) -> tuple:
         """Analyze concordance for a single variant across platforms."""
-        detected_platforms = [r.platform for r in results if r.detected]
-        detected_set = set(detected_platforms)
-        missed_platforms = [p for p in all_platforms if p not in detected_set]
+        detected_platforms = sorted(r.platform for r in results if r.detected)
+        # An unreported variant must not be counted as a tested negative.
+        missed_platforms = sorted(r.platform for r in results if not r.detected)
 
         n_detected = len(detected_platforms)
-        n_total = len(all_platforms)
+        n_total = len(results)
 
         # Confidence-weighted VAF
         if n_detected > 0:
@@ -169,7 +177,7 @@ class ConcordanceAnalyzer:
             weighted_vaf = 0.0
             for r in results:
                 if r.detected:
-                    weight = r.sensitivity  # higher sensitivity = higher weight
+                    weight = 1.0 / r.sensitivity  # smaller VAF limit receives greater weight
                     weighted_vaf += r.vaf_percent * weight
                     total_weight += weight
             cw_vaf = weighted_vaf / total_weight if total_weight > 0 else 0.0
@@ -177,7 +185,7 @@ class ConcordanceAnalyzer:
             cw_vaf = 0.0
 
         # Concordance determination
-        concordant = n_detected >= 2 or (n_detected == n_total and n_total >= 2)
+        concordant = n_total >= 2 and (n_detected == 0 or n_detected == n_total)
 
         # Consensus call
         if n_detected >= 2:

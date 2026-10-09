@@ -1,27 +1,35 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ctdna-liquid-biopsy-engine"
-version = "2.0.0"
-description = "LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker"
+version = "2.0.1"
+description = "Research-oriented ctDNA analysis and synthetic-data audit examples"
 readme = "README.md"
 authors = [{ name = "Dr. Abu Suraih Sakhri", email = "abusuraih@example.com" }]
-license = { text = "MIT" }
+license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Medical Science Apps.",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-requires-python = ">=3.9"
-dependencies = []
+requires-python = ">=3.10"
+dependencies = ["pydantic>=2,<3"]
+
+[project.optional-dependencies]
+server = ["fastapi>=0.110,<1", "uvicorn>=0.27,<1"]
+test = ["pytest>=7,<10", "httpx>=0.24,<1"]
 
 [project.scripts]
-ctdna-liquid-biopsy-engine = "ctdna_liquid_biopsy_agent.cli:main"
+ctdna-liquid-biopsy-engine = "cli:main"
+ctdna-clinical = "ctdna_liquid_biopsy_agent.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/abusuraihsakhri/ctdna-liquid-biopsy-engine"
-Repository = "https://github.com/abusuraihsakhri/ctdna-liquid-biopsy-engine.git"
+Homepage = "https://github.com/abusuraihsakhri/ctdna-liquid-biopsy-agent"
+Repository = "https://github.com/abusuraihsakhri/ctdna-liquid-biopsy-agent"
+
+[tool.setuptools]
+py-modules = ["cli", "ctdna_sentinel", "enrichment", "simulator", "input_validation"]
+
+[tool.setuptools.packages.find]
+include = ["agents*", "ctdna_liquid_biopsy_agent*"]
