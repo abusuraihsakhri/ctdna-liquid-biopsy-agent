@@ -4,6 +4,7 @@ Domain: Clinical & Biomedical AI
 Standard: CAP / CLSI / ISO Standards
 """
 import datetime
+import math
 from enum import Enum
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field, field_validator
@@ -34,7 +35,7 @@ class SystemTaskPayload(BaseModel):
     @field_validator("primary_metric", "secondary_metric")
     @classmethod
     def validate_metric_finite(cls, v: float) -> float:
-        if not isinstance(v, (int, float)) or v != v:  # NaN check
+        if not math.isfinite(v):
             raise ValueError("Metric must be a finite number")
         if abs(v) > 1e9:
             raise ValueError("Metric value exceeds allowed bounds")
@@ -43,7 +44,7 @@ class SystemTaskPayload(BaseModel):
     @field_validator("task_id", "target_identifier")
     @classmethod
     def validate_no_control_chars(cls, v: str) -> str:
-        if any(ord(c) < 32 and c not in "\t\n\r" for c in v):
+        if any(ord(c) < 32 or ord(c) == 127 for c in v):
             raise ValueError("Identifier must not contain control characters")
         return v
 

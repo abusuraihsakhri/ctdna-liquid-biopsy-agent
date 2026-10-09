@@ -152,7 +152,7 @@ class CHIPFilter:
     ) -> CHIPFilterResult:
         """Classify a single plasma variant as CHIP or tumor-derived."""
         gene = plasma.gene
-        is_chip_gene = gene in self._chip_genes
+        is_chip_gene = gene.upper() in self._chip_genes
 
         # Check if variant is present in WBC by exact ID match
         wbc_match = wbc_by_id.get(plasma.variant_id)
@@ -196,7 +196,7 @@ class CHIPFilter:
         if wbc_match is None:
             # Check if it's a known CHIP gene (could be low-level CHIP below WBC detection)
             if is_chip_gene:
-                chip_info = self._chip_genes[gene]
+                chip_info = self._chip_genes[gene.upper()]
                 typical_low, typical_high = chip_info["typical_vaf_range"]
                 if typical_low <= plasma.vaf_percent <= typical_high:
                     chip_prob = 0.3 + chip_prevalence
@@ -225,22 +225,25 @@ class CHIPFilter:
                 rationale=rationale,
             )
 
-        # Fallback
+        # WBC-positive variants with discordant VAF require review; do
+        # not silently retain them as tumor-derived.
         return CHIPFilterResult(
             variant_id=plasma.variant_id,
             gene=gene,
             vaf_percent=plasma.vaf_percent,
             is_chip=False,
-            chip_gene=None,
-            chip_probability=0.1,
-            filtering_action="INCLUDE",
-            rationale="Unable to classify — defaulting to include",
+            chip_gene=gene if is_chip_gene else None,
+            chip_probability=0.5,
+            filtering_action="UNCERTAIN",
+            rationale="Variant detected in WBC with a discordant VAF ratio; review required",
         )
 
     def _estimate_chip_prevalence(self, age: Optional[int]) -> float:
         """Estimate age-dependent CHIP prevalence."""
         if age is None:
             return 0.05  # default ~5%
+        if age < 0 or age > 120:
+            raise ValueError("patient_age must be between 0 and 120")
         for (low, high), prevalence in self._prevalence_by_age.items():
             if low <= age < high:
                 return prevalence
