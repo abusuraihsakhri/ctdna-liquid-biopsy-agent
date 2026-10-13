@@ -129,8 +129,8 @@ class ConcordanceAnalyzer:
                 raise ValueError(f"Duplicate measurements for variant {variant_id} on the same platform")
             # A common variant identifier cannot describe different genes across assays.
             # Refuse the comparison rather than assigning the first gene arbitrarily.
-            genes = {r.gene.strip().upper() for r in results if isinstance(r.gene, str) and r.gene.strip()}
-            if len(genes) != 1 or len(genes) != len({r.gene.strip().upper() for r in results}):
+            genes = {r.gene.strip().upper() if isinstance(r.gene, str) else "" for r in results}
+            if len(genes) != 1 or "" in genes:
                 raise ValueError(f"Missing or conflicting genes for variant {variant_id}")
 
         # Analyze each variant
