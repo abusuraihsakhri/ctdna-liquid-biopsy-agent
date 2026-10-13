@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker
-Tracks longitudinal plasma ctDNA variant allele frequencies, detecting molecular relapse months before radiographic progression.
+Provides synthetic-data ctDNA workflow examples; not a validated molecular relapse predictor.
 
 Domain: Precision Oncology
 Author: Dr. Abu Suraih Sakhri
@@ -15,6 +15,7 @@ import json
 import sys
 import uuid
 from typing import Dict, Any, List, Optional
+from input_validation import parse_csv_bool, safe_csv_cell
 
 
 class Severity(str):
@@ -32,15 +33,15 @@ class Severity(str):
 class DomainKnowledgeRegistry:
     """Enterprise domain rules, guideline matrices, and evidence benchmarks."""
     SYSTEM_VERSION = "2.0.0-PRO-CLINICAL"
-    ZERO_PHI_COMPLIANCE = True
-    HIPAA_SAFE_HARBOR = "ACTIVE_ON_PREMISES"
+    ZERO_PHI_COMPLIANCE = False
+    HIPAA_SAFE_HARBOR = "NOT_CERTIFIED"
 
     @staticmethod
     def audit_security_and_integrity(payload: Dict[str, Any]) -> List[str]:
         warnings = []
         for key in payload.keys():
             if any(phi_keyword in key.lower() for phi_keyword in ["patient_name", "ssn", "mrn_raw", "dob_raw"]):
-                warnings.append(f"PHI_DEFENSE_TRIGGERED: Direct identifier '{key}' masked to synthetic token.")
+                warnings.append(f"PHI_DEFENSE_TRIGGERED: Direct identifier field '{key}' detected; remove it before processing. No automatic masking is performed.")
         return warnings
 
 class AgentAlert:
@@ -88,7 +89,7 @@ class MRDStatusClassifierAgent:
     """Specialized Sub-Agent 2 for ctdna-liquid-biopsy-agent"""
     def evaluate(self, payload: Dict[str, Any]) -> List[AgentAlert]:
         alerts = []
-        is_critical = bool(payload.get("critical_flag", False))
+        is_critical = parse_csv_bool(payload.get("critical_flag", False))
         val2 = float(payload.get("metric_secondary", 5.0))
         if is_critical or val2 > 12.0:
             alerts.append(
@@ -165,9 +166,9 @@ class LiquidBiopsyCoordinator:
         if "summary" in q or "status" in q:
             return f"LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker currently tracking {len(self.case_registry)} cases in local air-gapped memory."
         elif "guidelines" in q or "protocol" in q:
-            return "All sub-agents operate under validated consensus clinical algorithms and CAP/CLSI/NCCN/WHO standards."
+            return "This prototype uses illustrative numerical thresholds, not validated clinical algorithms or guideline-derived cutoffs."
         else:
-            return f"LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker executive agent online. Continuous supervisory monitoring active across all domain parameters."
+            return "Synthetic-data rules are available for local evaluation; no continuous clinical monitoring is implemented."
 
 
 coordinator = LiquidBiopsyCoordinator()
@@ -180,7 +181,7 @@ def create_app():
 
         app = FastAPI(
             title="LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker",
-            description="Tracks longitudinal plasma ctDNA variant allele frequencies, detecting molecular relapse months before radiographic progression.",
+            description="Synthetic-data ctDNA rule examples; not clinically validated.",
             version="1.0.0",
         )
 
@@ -271,11 +272,11 @@ def main(argv=None):
             fieldnames = list(reader.fieldnames or [])
             rows = list(reader)
 
-        out_fields = fieldnames + ["overall_status", "total_alerts", "critical_count", "consensus_summary"]
+        out_fields = list(dict.fromkeys(fieldnames + ["overall_status", "total_alerts", "critical_count", "consensus_summary"]))
         out_rows = []
         for r in rows:
             dossier = coordinator.audit_case(dict(r))
-            row_dict = dict(r)
+            row_dict = {k: safe_csv_cell(v) for k, v in r.items()}
             row_dict["overall_status"] = dossier["overall_status"]
             row_dict["total_alerts"] = dossier["total_alerts"]
             row_dict["critical_count"] = dossier["critical_count"]
