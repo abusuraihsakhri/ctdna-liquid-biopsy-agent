@@ -5,6 +5,7 @@ using matched WBC sequencing data.
 Domain: Precision Oncology — Liquid Biopsy
 """
 import datetime
+import math
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 
@@ -112,6 +113,21 @@ class CHIPFilter:
         Returns:
             FilteredVariantList with CHIP classification for each variant
         """
+        # Measurement inputs must be physically interpretable; invalid counts can
+        # otherwise yield confident but spurious CHIP exclusions.
+        for record in [*plasma_variants, *wbc_variants]:
+            if not math.isfinite(record.vaf_percent) or not 0 <= record.vaf_percent <= 100:
+                raise ValueError("VAF must be a finite percentage between 0 and 100")
+            if record.depth <= 0 or not 0 <= record.alt_reads <= record.depth:
+                raise ValueError("Read depth must be positive and alternative reads within depth")
+
+        # Each variant should have one measurement in each specimen. Dict
+        # construction alone would silently discard repeated WBC calls.
+        for records, source in ((plasma_variants, "plasma"), (wbc_variants, "WBC")):
+            ids = [v.variant_id for v in records]
+            if len(set(ids)) != len(ids):
+                raise ValueError(f"Duplicate variant IDs in {source} measurements")
+
         # Build WBC lookup by variant_id and gene
         wbc_by_id = {v.variant_id: v for v in wbc_variants}
         wbc_by_gene: Dict[str, List[WBCSequenceData]] = {}

@@ -174,3 +174,75 @@ def test_concordance_rejects_duplicate_platform_variant():
     v = PlatformCtDNAResult("GUARDANT360", "V1", "EGFR", 2.0, 1000, True, 0.1)
     with pytest.raises(ValueError):
         ConcordanceAnalyzer().analyze_concordance("C", "S", [v, v])
+
+
+def test_concordance_rejects_conflicting_genes_for_same_variant():
+    from ctdna_liquid_biopsy_agent.concordance import ConcordanceAnalyzer, PlatformCtDNAResult
+    records = [
+        PlatformCtDNAResult("GUARDANT360", "VAR-001", "EGFR", 1.0, 1000, True, 0.1),
+        PlatformCtDNAResult("SIGNATERA", "VAR-001", "KRAS", 1.0, 1000, True, 0.01),
+    ]
+    with pytest.raises(ValueError, match="conflicting genes"):
+        ConcordanceAnalyzer().analyze_concordance("C", "S", records)
+
+
+def test_concordance_accepts_gene_case_variations():
+    from ctdna_liquid_biopsy_agent.concordance import ConcordanceAnalyzer, PlatformCtDNAResult
+    records = [
+        PlatformCtDNAResult("GUARDANT360", "VAR-001", "EGFR", 1.0, 1000, True, 0.1),
+        PlatformCtDNAResult("SIGNATERA", "VAR-001", "egfr", 1.0, 1000, True, 0.01),
+    ]
+    assert ConcordanceAnalyzer().analyze_concordance("C", "S", records).overall_concordance_score == 100.0
+
+
+def test_chip_filter_rejects_impossible_measurements():
+    bad = [
+        PlasmaVariant("V1", "EGFR", float("nan"), 1000, 10),
+        PlasmaVariant("V1", "EGFR", 101.0, 1000, 10),
+        PlasmaVariant("V1", "EGFR", 1.0, 0, 0),
+        PlasmaVariant("V1", "EGFR", 1.0, 100, 101),
+    ]
+    for measurement in bad:
+        with pytest.raises(ValueError):
+            CHIPFilter().filter_variants("C", "S", [measurement], [])
+
+
+def test_chip_filter_rejects_duplicate_wbc_variants():
+    plasma = [PlasmaVariant("V1", "DNMT3A", 5.0, 1000, 50)]
+    wbc = [WBCSequenceData("S1", "V1", "DNMT3A", 5.0, 1000, 50)]
+    with pytest.raises(ValueError, match="Duplicate variant IDs"):
+        CHIPFilter().filter_variants("C", "S", plasma, wbc * 2)
+
+
+def test_legacy_batch_parses_false_and_neutralizes_csv_formulas(tmp_path):
+    from ctdna_sentinel import main as legacy_main
+    source = tmp_path / "legacy-input.csv"
+    target = tmp_path / "legacy-output.csv"
+    source.write_text(
+        "case_id,metric_primary,metric_secondary,critical_flag,status_text,extra_note\n"
+        "SYNTH-01,1,1,False,NORMAL,=1+2\n", encoding="utf-8"
+    )
+    assert legacy_main(["batch", "-i", str(source), "-o", str(target)]) == 0
+    with target.open(newline="", encoding="utf-8") as handle:
+        result = next(csv.DictReader(handle))
+    assert result["overall_status"] == "CONCORDANT_NORMAL"
+    assert result["extra_note"] == "'=1+2"
+
+
+def test_legacy_does_not_claim_validated_algorithms_or_phi_certification():
+    from ctdna_sentinel import DomainKnowledgeRegistry, LiquidBiopsyCoordinator
+    assert DomainKnowledgeRegistry.ZERO_PHI_COMPLIANCE is False
+    assert DomainKnowledgeRegistry.HIPAA_SAFE_HARBOR == "NOT_CERTIFIED"
+    assert "not validated" in LiquidBiopsyCoordinator().query_assistant("guidelines")
+
+
+def test_legacy_advisory_does_not_report_concordant_normal():
+    from ctdna_sentinel import LiquidBiopsyCoordinator
+    dossier = LiquidBiopsyCoordinator().audit_case({
+        "case_id": "SYNTH-ADVISORY", "metric_primary": 1,
+        "metric_secondary": 1, "critical_flag": False, "status_text": "DISCORDANT",
+    })
+    assert dossier["critical_count"] == 0
+    assert dossier["warning_count"] == 0
+    assert dossier["total_alerts"] == 1
+    assert dossier["overall_status"] == "ADVISORY_ACTIVE"
