@@ -16,7 +16,7 @@ GitHub Pages publishing uses the deployment workflow at `.github/workflows/pages
 
 - **agents/** — Pydantic/FastAPI example supervisor, three heuristic threshold/descriptor workers, an in-memory HMAC-SHA256 audit chain, and a deterministic mock chat provider.
 - **ctdna_liquid_biopsy_agent/** — CHIP/WBC matching, serial single-variant VAF trend analysis, exploratory molecular response labels, multi-platform concordance, and a separate CLI/API.
-- **ctdna_sentinel.py** — legacy standalone CLI.
+- **ctdna_sentinel.py** — legacy standalone CLI, retained for backward compatibility; its audit rules are also illustrative.
 - **web/index.html** — independent, browser-only implementation of the three example enterprise workers.
 - **enrichment.py** and **simulator.py** — experimental and benchmark workflows.
 
@@ -51,7 +51,7 @@ ctdna-clinical batch -i sample.csv -o results.csv
 ctdna-liquid-biopsy-engine serve --host 127.0.0.1 --port 8000
 ```
 
-The enterprise batch CLI expects task_id, target_identifier, primary_metric, secondary_metric, is_critical_flag, and status_descriptor. The clinical batch CLI accepts case_id, patient_synthetic_id, metric_primary, metric_secondary, is_stat, and status_flag. Boolean CSV values such as True/False, 1/0, and yes/no are parsed explicitly; unrecognized values are rejected. CSV exports neutralize potentially executable spreadsheet formulas.
+The enterprise batch CLI expects task_id, target_identifier, primary_metric, secondary_metric, is_critical_flag, and status_descriptor. The clinical batch CLI accepts case_id, patient_synthetic_id, metric_primary, metric_secondary, is_stat, and status_flag. Boolean CSV values such as True/False, 1/0, and yes/no are parsed explicitly; unrecognized values are rejected. CSV exports, including those from the legacy standalone CLI, neutralize potentially executable spreadsheet formulas.
 
 ## REST endpoints
 
@@ -80,7 +80,7 @@ Compose binds the service to **127.0.0.1:8000** on the host and requires a persi
 
 Do not submit protected health information (PHI) to Python APIs, CLI batch files, or the browser UI. The identifier-pattern guard is **not** comprehensive de-identification, HIPAA compliance certification, or a guarantee against PHI disclosure. The enterprise audit log endpoint has no authentication; do not expose the server to the public Internet. The browser console only uses in-tab memory for submitted example values and does not send them to a remote service.
 
-CHIP filtering, concordance scores, platform profiles, and molecular relapse heuristics require analytical validation, measured error characteristics, calibrated uncertainty and assay-specific cutoffs. The static demonstrator does not run Python or Pyodide; complete calculations require a local Python environment or a managed backend.
+CHIP filtering now rejects nonfinite or out-of-range VAF, impossible read counts and duplicate variant IDs. Cross-platform concordance rejects incompatible gene annotations for the same variant ID. These are basic input-integrity checks, **not** evidence of assay validity. CHIP filtering, concordance scores, platform profiles, and molecular relapse heuristics require analytical validation, measured error characteristics, calibrated uncertainty and assay-specific cutoffs. The static demonstrator does not run Python or Pyodide; complete calculations require a local Python environment or a managed backend.
 
 ## Browser support and license
 
