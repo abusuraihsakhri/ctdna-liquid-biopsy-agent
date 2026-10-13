@@ -170,7 +170,7 @@ class LiquidBiopsyCoordinator:
         if "summary" in q or "status" in q:
             return f"LiquidBiopsy Sentinel: Circulating Tumor DNA (ctDNA) & Minimal Residual Disease Tracker currently tracking {len(self.case_registry)} cases in local air-gapped memory."
         elif "guidelines" in q or "protocol" in q:
-            return "This prototype uses illustrative numerical thresholds, not validated clinical algorithms or guideline-derived cutoffs."
+            return "Clinical guidelines provide context, but this prototype uses illustrative numerical thresholds, not validated clinical algorithms or guideline-derived cutoffs."
         else:
             return "Synthetic-data rules are available for local evaluation; no continuous clinical monitoring is implemented."
 
