@@ -127,6 +127,11 @@ class ConcordanceAnalyzer:
         for variant_id, results in variant_groups.items():
             if len({r.platform for r in results}) != len(results):
                 raise ValueError(f"Duplicate measurements for variant {variant_id} on the same platform")
+            # A common variant identifier cannot describe different genes across assays.
+            # Refuse the comparison rather than assigning the first gene arbitrarily.
+            genes = {r.gene.strip().upper() for r in results if isinstance(r.gene, str) and r.gene.strip()}
+            if len(genes) != 1 or len(genes) != len({r.gene.strip().upper() for r in results}):
+                raise ValueError(f"Missing or conflicting genes for variant {variant_id}")
 
         # Analyze each variant
         concordances: List[VariantConcordance] = []
