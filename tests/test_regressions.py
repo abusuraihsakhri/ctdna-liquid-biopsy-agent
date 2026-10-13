@@ -219,8 +219,8 @@ def test_legacy_batch_parses_false_and_neutralizes_csv_formulas(tmp_path):
     source = tmp_path / "legacy-input.csv"
     target = tmp_path / "legacy-output.csv"
     source.write_text(
-        "case_id,metric_primary,metric_secondary,critical_flag,status_text,extra_note\\n"
-        "SYNTH-01,1,1,False,NORMAL,=1+2\\n", encoding="utf-8"
+        "case_id,metric_primary,metric_secondary,critical_flag,status_text,extra_note\n"
+        "SYNTH-01,1,1,False,NORMAL,=1+2\n", encoding="utf-8"
     )
     assert legacy_main(["batch", "-i", str(source), "-o", str(target)]) == 0
     with target.open(newline="", encoding="utf-8") as handle:
