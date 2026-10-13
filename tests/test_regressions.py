@@ -234,3 +234,15 @@ def test_legacy_does_not_claim_validated_algorithms_or_phi_certification():
     assert DomainKnowledgeRegistry.ZERO_PHI_COMPLIANCE is False
     assert DomainKnowledgeRegistry.HIPAA_SAFE_HARBOR == "NOT_CERTIFIED"
     assert "not validated" in LiquidBiopsyCoordinator().query_assistant("guidelines")
+
+
+def test_legacy_advisory_does_not_report_concordant_normal():
+    from ctdna_sentinel import LiquidBiopsyCoordinator
+    dossier = LiquidBiopsyCoordinator().audit_case({
+        "case_id": "SYNTH-ADVISORY", "metric_primary": 1,
+        "metric_secondary": 1, "critical_flag": False, "status_text": "DISCORDANT",
+    })
+    assert dossier["critical_count"] == 0
+    assert dossier["warning_count"] == 0
+    assert dossier["total_alerts"] == 1
+    assert dossier["overall_status"] == "ADVISORY_ACTIVE"
