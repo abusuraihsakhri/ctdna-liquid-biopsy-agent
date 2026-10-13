@@ -143,7 +143,11 @@ class LiquidBiopsyCoordinator:
         critical_count = sum(1 for a in all_alerts if a.severity == Severity.CRITICAL)
         warning_count = sum(1 for a in all_alerts if a.severity == Severity.WARNING)
 
-        overall_status = "CRITICAL_ACTION_REQUIRED" if critical_count > 0 else ("WARNING_ACTIVE" if warning_count > 0 else "CONCORDANT_NORMAL")
+        overall_status = (
+            "CRITICAL_ACTION_REQUIRED" if critical_count > 0 else
+            "WARNING_ACTIVE" if warning_count > 0 else
+            "ADVISORY_ACTIVE" if all_alerts else "CONCORDANT_NORMAL"
+        )
 
         dossier = {
             "system": "ctdna-liquid-biopsy-agent",
